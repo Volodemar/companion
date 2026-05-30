@@ -35,6 +35,14 @@ namespace Companion.Core
                 .AsSingle()
                 .NonLazy();
 
+            // Локальные уведомления (фон) + мост сворачивания/возврата приложения
+            Container.Bind<NotificationService>().AsSingle().NonLazy();
+            Container.Bind<TimerBackgroundService>()
+                .FromNewComponentOnNewGameObject()
+                .WithGameObjectName("TimerBackgroundService")
+                .AsSingle()
+                .NonLazy();
+
             // Точка входа приложения
             Container.BindInterfacesAndSelfTo<AppController>().AsSingle().NonLazy();
 

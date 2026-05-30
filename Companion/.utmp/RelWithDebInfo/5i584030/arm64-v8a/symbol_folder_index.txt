@@ -1,0 +1,1 @@
+/home/vshan/Work/Companion/companion-git/Companion/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/5i584030/obj/arm64-v8a

@@ -1,6 +1,6 @@
 # ARCHITECTURE_GRAPH
 
-> Сгенерировано: 2026-05-30T18:16:45
+> Сгенерировано: 2026-05-30T18:28:32
 > Скрипт: script_graph.py v1.0.0
 > Проект: `/home/vshan/Work/Companion/companion-git/Companion`
 
@@ -11,14 +11,14 @@
 
 ## Сводка
 
-- Классов: **21**
-  - MonoBehaviour: 13
-  - Plain: 8
+- Классов: **24**
+  - MonoBehaviour: 14
+  - Plain: 10
 - Интерфейсов: **0**
 - Структур: **0**
 - Сцен (.unity): **3**
 - Префабов с пользовательскими скриптами: **7** из 7
-- Полей `[Inject]`: **7**
+- Полей `[Inject]`: **9**
 - Синглтонов (`static Instance`): **1**
 - Шейдеров: **0** (0 .shader, 0 .hlsl, 0 .compute, 0 .shadergraph)
 
@@ -26,9 +26,9 @@
 
 Подсчёт файлов по top-level папкам `Assets/`. Колонки: cs, shader+hlsl, prefab, unity, asset, mat, всего.
 
-- `Assets/!Companion/` — cs:20 sh:0 prefab:7 unity:3 asset:3 mat:0 всего:33
+- `Assets/!Companion/` — cs:22 sh:0 prefab:7 unity:3 asset:3 mat:0 всего:35
   - `Assets/!Companion/Prefabs/` — cs:0 sh:0 prefab:7 unity:0 asset:0 mat:0 всего:7
-  - `Assets/!Companion/Scripts/` — cs:20 sh:0 prefab:0 unity:0 asset:0 mat:0 всего:20
+  - `Assets/!Companion/Scripts/` — cs:22 sh:0 prefab:0 unity:0 asset:0 mat:0 всего:22
 - `Assets/DefaultVolumeProfile.asset/` — cs:0 sh:0 prefab:0 unity:0 asset:1 mat:0 всего:1
 - `Assets/Plugins/` — cs:256 sh:0 prefab:0 unity:0 asset:0 mat:0 всего:256
   - `Assets/Plugins/Zenject/` — cs:256 sh:0 prefab:0 unity:0 asset:0 mat:0 всего:256
@@ -41,7 +41,8 @@
 - **UIManager** — 3 (`[Inject]`×2, сцен×1)
 - **EventManager** — 3 (static×3)
 - **TimersStorage** — 2 (`[Inject]`×2)
-- **TimerService** — 1 (`[Inject]`×1)
+- **TimerService** — 2 (`[Inject]`×2)
+- **NotificationService** — 1 (`[Inject]`×1)
 - **CoroutineManager** — 1 (`[Inject]`×1)
 - **AudioManager** — 1 (`[Inject]`×1)
 - **MainSceneInstaller** — 1 (сцен×1)
@@ -68,6 +69,7 @@
       - UIWindowMain
       - UIWindowTimer
   - CoroutineManager
+  - TimerBackgroundService
   - TimerButton
   - TimerIndicator
   - TimerIndicatorBar
@@ -78,6 +80,10 @@
 - AppController [IInitializable]
 
 - EventManager
+
+- NotificationService
+
+- Running
 
 - SaveData
 
@@ -103,8 +109,10 @@
 - **AppController** (`Assets/!Companion/Scripts/Core/AppController.cs`) — *без входящих ссылок*
 - **TimerPopupController** (`Assets/!Companion/Scripts/UI/TimerPopupController.cs`) — *без входящих ссылок*
 
-### *Service (1)
-- **TimerService** (`Assets/!Companion/Scripts/Core/TimerService.cs`) — inject×1
+### *Service (3)
+- **NotificationService** (`Assets/!Companion/Scripts/Core/NotificationService.cs`) — inject×1
+- **TimerBackgroundService** (`Assets/!Companion/Scripts/Core/TimerBackgroundService.cs`) — *без входящих ссылок*
+- **TimerService** (`Assets/!Companion/Scripts/Core/TimerService.cs`) — inject×2
 
 ## Статические хабы
 
@@ -116,11 +124,12 @@
 
 Тип → классы которые его инжектят. Покрывает Zenject, VContainer, Reflex (общий атрибут).
 
+- **TimerService** ← 2: TimerBackgroundService, UIWindowTimer
 - **TimersStorage** ← 2: UIPopupTimerCreate, UIWindowTimer
 - **UIManager** ← 2: AppController, BaseGameObject
 - **AudioManager** ← 1: UIPopupTimerDone
 - **CoroutineManager** ← 1: BaseGameObject
-- **TimerService** ← 1: UIWindowTimer
+- **NotificationService** ← 1: TimerBackgroundService
 
 ## Синглтоны и доступ через `.Instance`
 
@@ -149,4 +158,5 @@
 Не учитывает: рефлексию, AssetBundle/Addressables-загрузку по строке, [MenuItem]-точки входа.
 Editor/Tests папки исключены.
 
+- Running — `Assets/!Companion/Scripts/Core/TimerService.cs`
 - SaveData — `Assets/!Companion/Scripts/Core/TimersStorage.cs`

@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -6,14 +7,21 @@ namespace Companion.Core
 {
     /// <summary>
     /// Запуск и отсчёт таймеров. Несколько таймеров идут параллельно.
-    /// О событиях сообщает через EventManager — UI на сам сервис не завязан.
+    /// Отсчёт ведётся по абсолютному времени (DateTime), а не по кадрам — поэтому
+    /// корректно переживает паузу приложения в фоне. О событиях сообщает через
+    /// EventManager — UI на сам сервис не завязан.
     /// </summary>
     public class TimerService
     {
-        private readonly CoroutineManager _coroutineManager;
+        private class Running
+        {
+            public TimerData timer;
+            public DateTime endUtc;
+            public string key; // ключ корутины в CoroutineManager (для остановки)
+        }
 
-        // id таймера -> ключ его корутины в CoroutineManager (нужен для остановки)
-        private readonly Dictionary<int, string> _running = new Dictionary<int, string>();
+        private readonly CoroutineManager _coroutineManager;
+        private readonly Dictionary<int, Running> _running = new Dictionary<int, Running>();
 
         public TimerService(CoroutineManager coroutineManager)
         {
@@ -28,37 +36,72 @@ namespace Companion.Core
             if (timer == null || _running.ContainsKey(timer.id))
                 return;
 
-            string key = _coroutineManager.CoroutineParallel(RunTimer(timer));
-            _running[timer.id] = key;
+            var r = new Running { timer = timer, endUtc = DateTime.UtcNow.AddSeconds(timer.minutes * 60) };
+            r.key = _coroutineManager.CoroutineParallel(RunTimer(r));
+            _running[timer.id] = r;
 
             EventManager.OnActionSend(EventManager.TimerStarted, timer, timer.minutes * 60);
         }
 
-        /// <summary>Досрочно остановить таймер (без попапа завершения).</summary>
+        /// <summary>Досрочно остановить таймер (без сигнала завершения).</summary>
         public void StopTimer(int timerId)
         {
-            if (_running.TryGetValue(timerId, out string key))
+            if (_running.TryGetValue(timerId, out var r))
             {
-                _coroutineManager.StopCoroutineByKey(key);
+                _coroutineManager.StopCoroutineByKey(r.key);
                 _running.Remove(timerId);
                 EventManager.OnActionSend(EventManager.TimerStopped, timerId, null);
             }
         }
 
-        private IEnumerator RunTimer(TimerData timer)
+        /// <summary>Идущие таймеры и остаток секунд каждого (для планирования уведомлений в фоне).</summary>
+        public List<(TimerData timer, int remaining)> GetRunning()
         {
-            int remaining = timer.minutes * 60;
+            var list = new List<(TimerData, int)>();
+            foreach (var r in _running.Values)
+                list.Add((r.timer, RemainingSeconds(r)));
+            return list;
+        }
 
-            while (remaining > 0)
+        /// <summary>Завершить таймеры, чьё время уже истекло (например, пока приложение было в фоне).</summary>
+        public void CompleteElapsed()
+        {
+            foreach (var r in new List<Running>(_running.Values)) // копия — Complete меняет словарь
             {
-                EventManager.OnActionSend(EventManager.TimerTick, timer.id, remaining);
+                if (RemainingSeconds(r) <= 0)
+                    Complete(r);
+            }
+        }
+
+        private static int RemainingSeconds(Running r)
+        {
+            return Mathf.Max(0, (int)Math.Ceiling((r.endUtc - DateTime.UtcNow).TotalSeconds));
+        }
+
+        private void Complete(Running r)
+        {
+            if (!_running.ContainsKey(r.timer.id))
+                return;
+
+            _running.Remove(r.timer.id);
+            EventManager.OnActionSend(EventManager.TimerTick, r.timer.id, 0);
+            EventManager.OnActionSend(EventManager.TimerCompleted, r.timer, null);
+            _coroutineManager.StopCoroutineByKey(r.key);
+        }
+
+        private IEnumerator RunTimer(Running r)
+        {
+            while (true)
+            {
+                int remaining = RemainingSeconds(r);
+                if (remaining <= 0)
+                    break;
+
+                EventManager.OnActionSend(EventManager.TimerTick, r.timer.id, remaining);
                 yield return new WaitForSeconds(1f);
-                remaining--;
             }
 
-            EventManager.OnActionSend(EventManager.TimerTick, timer.id, 0);
-            _running.Remove(timer.id);
-            EventManager.OnActionSend(EventManager.TimerCompleted, timer, null);
+            Complete(r);
         }
     }
 }
