@@ -3,58 +3,58 @@ using UnityEngine;
 namespace Companion.Core
 {
     /// <summary>
-    /// Простой проигрыватель звуков. Сигнал завершения таймера генерируется
-    /// программно (синус с затуханием) — отдельный аудио-ассет не нужен.
-    /// Подписан на EventManager: играет beep по TimerCompleted.
+    /// Проигрыватель сигнала-будильника. Сигнал — периодический бип (тон + тишина),
+    /// зациклен, генерируется в коде (без аудио-ассета). Источник один и общий,
+    /// поэтому при нескольких одновременно завершившихся таймерах звук не накладывается —
+    /// это один будильник, который звенит, пока его не остановят.
     /// </summary>
     public class AudioManager : MonoBehaviour
     {
         private AudioSource _source;
-        private AudioClip _beep;
 
         private void Awake()
         {
             _source = gameObject.AddComponent<AudioSource>();
             _source.playOnAwake = false;
-            _beep = CreateBeep();
-            EventManager.OnAction += OnEvent;
+            _source.loop = true;
+            _source.clip = CreateBeepLoop();
         }
 
-        private void OnDestroy()
+        /// <summary>Запустить периодический сигнал (если ещё не звучит).</summary>
+        public void StartAlarm()
         {
-            EventManager.OnAction -= OnEvent;
+            if (_source != null && !_source.isPlaying)
+                _source.Play();
         }
 
-        private void OnEvent(int id, object obj, object obj2)
+        /// <summary>Остановить сигнал.</summary>
+        public void StopAlarm()
         {
-            if (id == EventManager.TimerCompleted)
-                PlayBeep();
+            if (_source != null)
+                _source.Stop();
         }
 
-        public void PlayBeep()
-        {
-            if (_source != null && _beep != null)
-                _source.PlayOneShot(_beep);
-        }
-
-        // Короткий сигнал ~0.4 c, 880 Гц, с линейным затуханием.
-        private AudioClip CreateBeep()
+        // Клип «тон ~0.4 c + тишина до 1 c», зациклен → бип примерно раз в секунду.
+        private AudioClip CreateBeepLoop()
         {
             const int sampleRate = 44100;
-            const float duration = 0.4f;
+            const float toneDuration = 0.4f;
+            const float totalDuration = 1.0f;
             const float frequency = 880f;
 
-            int count = (int)(sampleRate * duration);
-            var samples = new float[count];
+            int total = (int)(sampleRate * totalDuration);
+            int toneCount = (int)(sampleRate * toneDuration);
+            var samples = new float[total];
 
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < toneCount; i++)
             {
                 float t = (float)i / sampleRate;
-                float envelope = Mathf.Clamp01(1f - t / duration);
+                float envelope = Mathf.Clamp01(1f - t / toneDuration);
                 samples[i] = Mathf.Sin(2f * Mathf.PI * frequency * t) * 0.5f * envelope;
             }
+            // хвост массива остаётся нулевым — это пауза между бипами
 
-            var clip = AudioClip.Create("BeepTimerDone", count, 1, sampleRate, false);
+            var clip = AudioClip.Create("AlarmBeepLoop", total, 1, sampleRate, false);
             clip.SetData(samples, 0);
             return clip;
         }
