@@ -20,8 +20,7 @@ namespace Companion.UI
 
         private void OnTimerClicked()
         {
-            // Заглушка: раздел «Таймер» ещё не реализован
-            Debug.Log("[ui] Нажата кнопка «Таймер»");
+            _ui.GetWindow<UIWindowTimer>().Show();
         }
 
         private void OnMedicationsClicked()

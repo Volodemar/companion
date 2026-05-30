@@ -24,8 +24,22 @@ namespace Companion.Core
             // UIManager берём из объекта сцены
             Container.Bind<UIManager>().FromComponentOn(uiManager.gameObject).AsSingle();
 
+            // Хранилище и сервис таймеров
+            Container.Bind<TimersStorage>().AsSingle();
+            Container.Bind<TimerService>().AsSingle().NonLazy();
+
+            // Звук: создаётся на отдельном GameObject, beep генерируется в коде
+            Container.Bind<AudioManager>()
+                .FromNewComponentOnNewGameObject()
+                .WithGameObjectName("AudioManager")
+                .AsSingle()
+                .NonLazy();
+
             // Точка входа приложения
             Container.BindInterfacesAndSelfTo<AppController>().AsSingle().NonLazy();
+
+            // Слушатель завершения таймеров → показ попапа (чтобы попап мог быть выключен в сцене)
+            Container.BindInterfacesAndSelfTo<TimerPopupController>().AsSingle().NonLazy();
         }
     }
 }
