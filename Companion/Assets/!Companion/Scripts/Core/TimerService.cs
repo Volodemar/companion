@@ -63,13 +63,17 @@ namespace Companion.Core
             return list;
         }
 
-        /// <summary>Завершить таймеры, чьё время уже истекло (например, пока приложение было в фоне).</summary>
+        /// <summary>
+        /// Завершить таймеры, истёкшие в фоне (вызывается на возврате в приложение).
+        /// ring=false: попап «какой таймер сработал» покажем, но in-app сигнал НЕ играем —
+        /// нативный будильник уже отзвенел в фоне.
+        /// </summary>
         public void CompleteElapsed()
         {
             foreach (var r in new List<Running>(_running.Values)) // копия — Complete меняет словарь
             {
                 if (RemainingSeconds(r) <= 0)
-                    Complete(r);
+                    Complete(r, ring: false);
             }
         }
 
@@ -78,14 +82,14 @@ namespace Companion.Core
             return Mathf.Max(0, (int)Math.Ceiling((r.endUtc - DateTime.UtcNow).TotalSeconds));
         }
 
-        private void Complete(Running r)
+        private void Complete(Running r, bool ring)
         {
             if (!_running.ContainsKey(r.timer.id))
                 return;
 
             _running.Remove(r.timer.id);
             EventManager.OnActionSend(EventManager.TimerTick, r.timer.id, 0);
-            EventManager.OnActionSend(EventManager.TimerCompleted, r.timer, null);
+            EventManager.OnActionSend(EventManager.TimerCompleted, r.timer, ring);
             _coroutineManager.StopCoroutineByKey(r.key);
         }
 
@@ -101,7 +105,7 @@ namespace Companion.Core
                 yield return new WaitForSeconds(1f);
             }
 
-            Complete(r);
+            Complete(r, ring: true);
         }
     }
 }

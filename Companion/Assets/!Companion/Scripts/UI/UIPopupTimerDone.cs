@@ -27,11 +27,16 @@ namespace Companion.UI
             buttonOk.onClick.AddListener(OnOkClicked);
         }
 
-        /// <summary>Добавить завершившийся таймер в очередь и включить будильник.</summary>
-        public void ShowDone(string name)
+        /// <summary>
+        /// Показать попап завершившегося таймера. ring=true — играть in-app сигнал (передний план);
+        /// ring=false — только показать (фоновый будильник уже отзвенел нативно).
+        /// </summary>
+        public void ShowDone(string name, bool ring)
         {
             _queue.Enqueue(name);
-            _audio.StartAlarm();
+
+            if (ring)
+                _audio.StartAlarm();
 
             if (!gameObject.activeSelf)
                 ShowNext();

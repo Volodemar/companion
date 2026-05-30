@@ -12,7 +12,7 @@ namespace Companion.Core
         // Таймеры
         public static int TimerStarted   => 10;  // obj: TimerData, obj2: int секунд
         public static int TimerTick      => 11;  // obj: int id,   obj2: int остаток секунд
-        public static int TimerCompleted => 12;  // obj: TimerData, obj2: null
+        public static int TimerCompleted => 12;  // obj: TimerData, obj2: bool ring (играть ли in-app сигнал)
         public static int TimerStopped   => 13;  // obj: int id,    obj2: null
 
         public static Action<int, object, object> OnAction;

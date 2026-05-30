@@ -1,0 +1,28 @@
+plugins {
+    id 'com.android.library'
+}
+
+// compileSdk берём как у основного проекта Unity (не ниже 34 — нужен для FGS media type)
+def resolveCompileSdk() {
+    try {
+        def unityLib = project(':unityLibrary').extensions.getByName('android')
+        def n = unityLib.compileSdkVersion.find('\\d+').toInteger()
+        return n < 34 ? 34 : n
+    } catch (Throwable t) {
+        return 34
+    }
+}
+
+android {
+    namespace "com.mynative.androidnotify"
+    compileSdkVersion resolveCompileSdk()
+
+    defaultConfig {
+        minSdkVersion 24
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}

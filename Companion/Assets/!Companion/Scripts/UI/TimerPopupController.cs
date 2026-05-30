@@ -34,7 +34,8 @@ namespace Companion.UI
                 return;
 
             string name = (obj as TimerData)?.name ?? "Таймер";
-            _ui.GetPopup<UIPopupTimerDone>()?.ShowDone(name);
+            bool ring = obj2 is bool b && b; // фон → false (только попап), передний план → true
+            _ui.GetPopup<UIPopupTimerDone>()?.ShowDone(name, ring);
         }
     }
 }
