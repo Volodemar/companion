@@ -25,8 +25,7 @@ namespace Companion.UI
 
         private void OnMedicationsClicked()
         {
-            // Заглушка: раздел «Лекарства» ещё не реализован
-            Debug.Log("[ui] Нажата кнопка «Лекарства»");
+            _ui.GetWindow<UIWindowMedication>().Show();
         }
     }
 }

@@ -1,6 +1,6 @@
 # ARCHITECTURE_GRAPH
 
-> Сгенерировано: 2026-05-30T20:24:16
+> Сгенерировано: 2026-05-30T22:11:55
 > Скрипт: script_graph.py v1.0.0
 > Проект: `/home/vshan/Work/Companion/companion-git/Companion`
 
@@ -11,14 +11,14 @@
 
 ## Сводка
 
-- Классов: **25**
-  - MonoBehaviour: 15
-  - Plain: 10
+- Классов: **32**
+  - MonoBehaviour: 18
+  - Plain: 14
 - Интерфейсов: **0**
 - Структур: **0**
 - Сцен (.unity): **3**
-- Префабов с пользовательскими скриптами: **7** из 7
-- Полей `[Inject]`: **8**
+- Префабов с пользовательскими скриптами: **10** из 10
+- Полей `[Inject]`: **11**
 - Синглтонов (`static Instance`): **1**
 - Шейдеров: **0** (0 .shader, 0 .hlsl, 0 .compute, 0 .shadergraph)
 
@@ -26,9 +26,9 @@
 
 Подсчёт файлов по top-level папкам `Assets/`. Колонки: cs, shader+hlsl, prefab, unity, asset, mat, всего.
 
-- `Assets/!Companion/` — cs:22 sh:0 prefab:7 unity:3 asset:3 mat:0 всего:35
-  - `Assets/!Companion/Prefabs/` — cs:0 sh:0 prefab:7 unity:0 asset:0 mat:0 всего:7
-  - `Assets/!Companion/Scripts/` — cs:22 sh:0 prefab:0 unity:0 asset:0 mat:0 всего:22
+- `Assets/!Companion/` — cs:28 sh:0 prefab:10 unity:3 asset:3 mat:0 всего:44
+  - `Assets/!Companion/Prefabs/` — cs:0 sh:0 prefab:10 unity:0 asset:0 mat:0 всего:10
+  - `Assets/!Companion/Scripts/` — cs:28 sh:0 prefab:0 unity:0 asset:0 mat:0 всего:28
 - `Assets/DefaultVolumeProfile.asset/` — cs:0 sh:0 prefab:0 unity:0 asset:1 mat:0 всего:1
 - `Assets/Plugins/` — cs:257 sh:0 prefab:0 unity:0 asset:0 mat:0 всего:257
   - `Assets/Plugins/Zenject/` — cs:256 sh:0 prefab:0 unity:0 asset:0 mat:0 всего:256
@@ -42,18 +42,24 @@
 - **EventManager** — 3 (static×3)
 - **TimersStorage** — 2 (`[Inject]`×2)
 - **TimerService** — 2 (`[Inject]`×2)
+- **MedicationsStorage** — 2 (`[Inject]`×2)
+- **SwipeRow** — 2 (префабов×2)
+- **MedicationHistoryStorage** — 1 (`[Inject]`×1)
 - **CoroutineManager** — 1 (`[Inject]`×1)
 - **AudioManager** — 1 (`[Inject]`×1)
+- **MedicationData** — 1 (static×1)
 - **AlarmNotify** — 1 (static×1)
 - **MainSceneInstaller** — 1 (сцен×1)
 - **UIWindowTimer** — 1 (префабов×1)
+- **UIWindowMedication** — 1 (префабов×1)
 - **UIWindowMain** — 1 (префабов×1)
 - **UIPopupTimerDone** — 1 (префабов×1)
 - **UIPopupTimerCreate** — 1 (префабов×1)
+- **UIPopupMedicationCreate** — 1 (префабов×1)
 - **TimerIndicatorBar** — 1 (префабов×1)
 - **TimerIndicator** — 1 (префабов×1)
 - **TimerButton** — 1 (префабов×1)
-- **SwipeRow** — 1 (префабов×1)
+- **MedicationRow** — 1 (префабов×1)
 
 ## Иерархия наследования
 
@@ -64,12 +70,15 @@
   - BaseGameObject
     - UIManager
     - UIPopup
+      - UIPopupMedicationCreate
       - UIPopupTimerCreate
       - UIPopupTimerDone
     - UIWindow
       - UIWindowMain
+      - UIWindowMedication
       - UIWindowTimer
   - CoroutineManager
+  - MedicationRow
   - SwipeRow [IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerDownHandler, IPointerClickHandler]
   - TimerBackgroundService
   - TimerButton
@@ -84,6 +93,14 @@
 - AppController [IInitializable]
 
 - EventManager
+
+- HistoryEntry
+
+- MedicationData
+
+- MedicationHistoryStorage
+
+- MedicationsStorage
 
 - Running
 
@@ -125,11 +142,13 @@
 
 Тип → классы которые его инжектят. Покрывает Zenject, VContainer, Reflex (общий атрибут).
 
+- **MedicationsStorage** ← 2: UIPopupMedicationCreate, UIWindowMedication
 - **TimerService** ← 2: TimerBackgroundService, UIWindowTimer
 - **TimersStorage** ← 2: UIPopupTimerCreate, UIWindowTimer
 - **UIManager** ← 2: AppController, BaseGameObject
 - **AudioManager** ← 1: UIPopupTimerDone
 - **CoroutineManager** ← 1: BaseGameObject
+- **MedicationHistoryStorage** ← 1: UIWindowMedication
 
 ## Синглтоны и доступ через `.Instance`
 
@@ -144,12 +163,15 @@
 
 Только префабы с привязанными пользовательскими скриптами.
 
+- `Assets/!Companion/Prefabs/UI/MedicationRow.prefab`: MedicationRow, SwipeRow
 - `Assets/!Companion/Prefabs/UI/TimerButton.prefab`: SwipeRow, TimerButton
 - `Assets/!Companion/Prefabs/UI/TimerIndicator.prefab`: TimerIndicator
 - `Assets/!Companion/Prefabs/UI/TimerIndicatorBar.prefab`: TimerIndicatorBar
+- `Assets/!Companion/Prefabs/UI/UIPopupMedicationCreate.prefab`: UIPopupMedicationCreate
 - `Assets/!Companion/Prefabs/UI/UIPopupTimerCreate.prefab`: UIPopupTimerCreate
 - `Assets/!Companion/Prefabs/UI/UIPopupTimerDone.prefab`: UIPopupTimerDone
 - `Assets/!Companion/Prefabs/UI/UIWindowMain.prefab`: UIWindowMain
+- `Assets/!Companion/Prefabs/UI/UIWindowMedication.prefab`: UIWindowMedication
 - `Assets/!Companion/Prefabs/UI/UIWindowTimer.prefab`: UIWindowTimer
 
 ## Возможный мёртвый код
@@ -158,5 +180,6 @@
 Не учитывает: рефлексию, AssetBundle/Addressables-загрузку по строке, [MenuItem]-точки входа.
 Editor/Tests папки исключены.
 
+- HistoryEntry — `Assets/!Companion/Scripts/Core/MedicationHistoryStorage.cs`
 - Running — `Assets/!Companion/Scripts/Core/TimerService.cs`
 - SaveData — `Assets/!Companion/Scripts/Core/TimersStorage.cs`

@@ -28,6 +28,10 @@ namespace Companion.Core
             Container.Bind<TimersStorage>().AsSingle();
             Container.Bind<TimerService>().AsSingle().NonLazy();
 
+            // Хранилища раздела «Лекарства»: список строк и журнал истории приёма
+            Container.Bind<MedicationsStorage>().AsSingle();
+            Container.Bind<MedicationHistoryStorage>().AsSingle();
+
             // Звук: создаётся на отдельном GameObject, beep генерируется в коде
             Container.Bind<AudioManager>()
                 .FromNewComponentOnNewGameObject()
