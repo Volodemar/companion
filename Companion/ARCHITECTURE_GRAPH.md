@@ -1,6 +1,6 @@
 # ARCHITECTURE_GRAPH
 
-> Сгенерировано: 2026-05-30T18:28:32
+> Сгенерировано: 2026-05-30T19:37:46
 > Скрипт: script_graph.py v1.0.0
 > Проект: `/home/vshan/Work/Companion/companion-git/Companion`
 
@@ -11,8 +11,8 @@
 
 ## Сводка
 
-- Классов: **24**
-  - MonoBehaviour: 14
+- Классов: **25**
+  - MonoBehaviour: 15
   - Plain: 10
 - Интерфейсов: **0**
 - Структур: **0**
@@ -26,9 +26,9 @@
 
 Подсчёт файлов по top-level папкам `Assets/`. Колонки: cs, shader+hlsl, prefab, unity, asset, mat, всего.
 
-- `Assets/!Companion/` — cs:22 sh:0 prefab:7 unity:3 asset:3 mat:0 всего:35
+- `Assets/!Companion/` — cs:23 sh:0 prefab:7 unity:3 asset:3 mat:0 всего:36
   - `Assets/!Companion/Prefabs/` — cs:0 sh:0 prefab:7 unity:0 asset:0 mat:0 всего:7
-  - `Assets/!Companion/Scripts/` — cs:22 sh:0 prefab:0 unity:0 asset:0 mat:0 всего:22
+  - `Assets/!Companion/Scripts/` — cs:23 sh:0 prefab:0 unity:0 asset:0 mat:0 всего:23
 - `Assets/DefaultVolumeProfile.asset/` — cs:0 sh:0 prefab:0 unity:0 asset:1 mat:0 всего:1
 - `Assets/Plugins/` — cs:256 sh:0 prefab:0 unity:0 asset:0 mat:0 всего:256
   - `Assets/Plugins/Zenject/` — cs:256 sh:0 prefab:0 unity:0 asset:0 mat:0 всего:256
@@ -53,6 +53,7 @@
 - **TimerIndicatorBar** — 1 (префабов×1)
 - **TimerIndicator** — 1 (префабов×1)
 - **TimerButton** — 1 (префабов×1)
+- **SwipeRow** — 1 (префабов×1)
 
 ## Иерархия наследования
 
@@ -69,6 +70,7 @@
       - UIWindowMain
       - UIWindowTimer
   - CoroutineManager
+  - SwipeRow [IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerDownHandler, IPointerClickHandler]
   - TimerBackgroundService
   - TimerButton
   - TimerIndicator
@@ -144,7 +146,7 @@
 
 Только префабы с привязанными пользовательскими скриптами.
 
-- `Assets/!Companion/Prefabs/UI/TimerButton.prefab`: TimerButton
+- `Assets/!Companion/Prefabs/UI/TimerButton.prefab`: SwipeRow, TimerButton
 - `Assets/!Companion/Prefabs/UI/TimerIndicator.prefab`: TimerIndicator
 - `Assets/!Companion/Prefabs/UI/TimerIndicatorBar.prefab`: TimerIndicatorBar
 - `Assets/!Companion/Prefabs/UI/UIPopupTimerCreate.prefab`: UIPopupTimerCreate

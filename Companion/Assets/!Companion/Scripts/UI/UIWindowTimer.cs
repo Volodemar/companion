@@ -47,7 +47,15 @@ namespace Companion.UI
                 button.gameObject.SetActive(true);
 
                 var captured = timer; // замыкание на конкретный таймер
-                button.Setup(captured, () => _timerService.StartTimer(captured));
+                button.Setup(
+                    captured,
+                    onStart: () => _timerService.StartTimer(captured),
+                    onDelete: () =>
+                    {
+                        _timerService.StopTimer(captured.id); // если шёл — остановить
+                        _storage.Remove(captured.id);
+                        RebuildList();
+                    });
                 _buttons.Add(button);
             }
         }
