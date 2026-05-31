@@ -19,6 +19,9 @@ android {
 
     defaultConfig {
         minSdkVersion 24
+        // Правила R8 «не вырезать плагин» — применяются автоматически в приложении при минификации.
+        // Без них классы, вызываемые только из C# через JNI, удаляются → ClassNotFoundException.
+        consumerProguardFiles 'consumer-rules.pro'
     }
 
     compileOptions {

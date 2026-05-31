@@ -57,6 +57,74 @@ namespace MyNativeAndroidNotify
 #endif
         }
 
+        /// <summary>Показать постоянное «идущее» уведомление таймера (время окончания + «Стоп»).</summary>
+        public static void ShowRunning(int id, string name, string endText)
+        {
+#if UNITY_ANDROID && !UNITY_EDITOR
+            try
+            {
+                using (var api = new AndroidJavaClass(JavaClass))
+                using (var ctx = CurrentActivity())
+                    api.CallStatic("showRunning", ctx, id, name ?? string.Empty, endText ?? string.Empty);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"Error: Ошибка показа уведомления таймера: {e.Message}");
+            }
+#endif
+        }
+
+        /// <summary>Убрать «идущее» уведомление таймера.</summary>
+        public static void HideRunning(int id)
+        {
+#if UNITY_ANDROID && !UNITY_EDITOR
+            try
+            {
+                using (var api = new AndroidJavaClass(JavaClass))
+                using (var ctx = CurrentActivity())
+                    api.CallStatic("hideRunning", ctx, id);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"Error: Ошибка скрытия уведомления таймера: {e.Message}");
+            }
+#endif
+        }
+
+        /// <summary>
+        /// Забрать id таймеров, остановленных кнопкой «Стоп» из уведомления (и очистить список).
+        /// Пусто в редакторе/не на Android.
+        /// </summary>
+        public static int[] ConsumePendingStops()
+        {
+#if UNITY_ANDROID && !UNITY_EDITOR
+            try
+            {
+                string csv;
+                using (var api = new AndroidJavaClass(JavaClass))
+                using (var ctx = CurrentActivity())
+                    csv = api.CallStatic<string>("consumePendingStops", ctx);
+
+                if (string.IsNullOrEmpty(csv))
+                    return System.Array.Empty<int>();
+
+                string[] parts = csv.Split(',');
+                var list = new System.Collections.Generic.List<int>(parts.Length);
+                foreach (var p in parts)
+                    if (int.TryParse(p, out int v))
+                        list.Add(v);
+                return list.ToArray();
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"Error: Ошибка чтения остановленных таймеров: {e.Message}");
+                return System.Array.Empty<int>();
+            }
+#else
+            return System.Array.Empty<int>();
+#endif
+        }
+
 #if UNITY_ANDROID && !UNITY_EDITOR
         private static AndroidJavaObject CurrentActivity()
         {

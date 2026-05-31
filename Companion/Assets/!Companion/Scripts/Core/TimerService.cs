@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using MyNativeAndroidNotify;
 using UnityEngine;
 
 namespace Companion.Core
@@ -20,12 +21,25 @@ namespace Companion.Core
             public string key; // ключ корутины в CoroutineManager (для остановки)
         }
 
+        // Буфер к будильнику: ставим его на (длительность + буфер), чтобы на переднем плане in-app
+        // сигнал успел сработать в точное время и снять будильник (без двойного звона), а в фоне,
+        // где Unity заморожен и снять некому, будильник звенит сам — с небольшой задержкой.
+        private const int AlarmEndBufferSeconds = 3;
+
         private readonly CoroutineManager _coroutineManager;
+        private readonly TimersStorage _storage;
+        private readonly TimerRunsStorage _runs;
         private readonly Dictionary<int, Running> _running = new Dictionary<int, Running>();
 
-        public TimerService(CoroutineManager coroutineManager)
+        public TimerService(CoroutineManager coroutineManager, TimersStorage storage, TimerRunsStorage runs)
         {
             _coroutineManager = coroutineManager;
+            _storage = storage;
+            _runs = runs;
+
+            // Восстановление идущих таймеров после перезапуска приложения — через кадр,
+            // чтобы UI и подписчики шины (индикаторы, попап) успели подняться.
+            _coroutineManager.CoroutineParallel(RestoreRunningTimers());
         }
 
         public bool IsRunning(int timerId) => _running.ContainsKey(timerId);
@@ -36,11 +50,22 @@ namespace Companion.Core
             if (timer == null || _running.ContainsKey(timer.id))
                 return;
 
-            var r = new Running { timer = timer, endUtc = DateTime.UtcNow.AddSeconds(timer.minutes * 60) };
+            int durationSeconds = timer.minutes * 60;
+            var r = new Running { timer = timer, endUtc = DateTime.UtcNow.AddSeconds(durationSeconds) };
             r.key = _coroutineManager.CoroutineParallel(RunTimer(r));
             _running[timer.id] = r;
+            _runs.StartRun(timer.id, r.endUtc); // запоминаем идущий таймер на диск (переживает перезапуск)
 
-            EventManager.OnActionSend(EventManager.TimerStarted, timer, timer.minutes * 60);
+            EventManager.OnActionSend(EventManager.TimerStarted, timer, durationSeconds);
+
+            // Системный будильник планируем СРАЗУ при старте (а не при сворачивании) — так он
+            // надёжно вооружён к моменту, когда приложение свернут/заморозят. Зовётся ПОСЛЕ события,
+            // чтобы любой сбой плагина не помешал запуску таймера и обновлению UI.
+            AlarmNotify.Schedule(timer.id, durationSeconds + AlarmEndBufferSeconds,
+                "Таймер", $"«{timer.name}» — время вышло");
+
+            // Постоянное «идущее» уведомление: заранее посчитанное время окончания (не тикает) + «Стоп».
+            AlarmNotify.ShowRunning(timer.id, timer.name, DateTime.Now.AddSeconds(durationSeconds).ToString("HH:mm"));
         }
 
         /// <summary>Досрочно остановить таймер (без сигнала завершения).</summary>
@@ -50,7 +75,10 @@ namespace Companion.Core
             {
                 _coroutineManager.StopCoroutineByKey(r.key);
                 _running.Remove(timerId);
+                _runs.EndRun(timerId); // убрать из сохранённых идущих
                 EventManager.OnActionSend(EventManager.TimerStopped, timerId, null);
+                AlarmNotify.Cancel(timerId);      // снять запланированный будильник
+                AlarmNotify.HideRunning(timerId); // убрать «идущее» уведомление
             }
         }
 
@@ -88,9 +116,15 @@ namespace Companion.Core
                 return;
 
             _running.Remove(r.timer.id);
+            _runs.EndRun(r.timer.id); // убрать из сохранённых идущих
             EventManager.OnActionSend(EventManager.TimerTick, r.timer.id, 0);
             EventManager.OnActionSend(EventManager.TimerCompleted, r.timer, ring);
             _coroutineManager.StopCoroutineByKey(r.key);
+
+            // Снимаем будильник: на переднем плане (ring=true) — чтобы он не зазвенел вдобавок к
+            // in-app сигналу; в фоне (ring=false) он уже отзвенел, отмена просто безвредна.
+            AlarmNotify.Cancel(r.timer.id);
+            AlarmNotify.HideRunning(r.timer.id); // «идущее» уведомление больше не нужно
         }
 
         private IEnumerator RunTimer(Running r)
@@ -105,7 +139,92 @@ namespace Companion.Core
                 yield return new WaitForSeconds(1f);
             }
 
+            // На случай, если этот таймер успели остановить кнопкой «Стоп» из уведомления, пока
+            // приложение было на переднем плане: доедаем пометку — тогда Complete ниже не зазвенит.
+            ApplyPendingStops();
             Complete(r, ring: true);
+        }
+
+        /// <summary>
+        /// Доесть таймеры, остановленные кнопкой «Стоп» из уведомления (native снял будильник и
+        /// уведомление сразу, но состояние/индикатор в приложении надо привести в порядок здесь).
+        /// Зовётся при возврате в приложение, при запуске и перед завершением таймера.
+        /// </summary>
+        public void ApplyPendingStops()
+        {
+            int[] ids = AlarmNotify.ConsumePendingStops();
+            if (ids == null || ids.Length == 0)
+                return;
+
+            foreach (int id in ids)
+            {
+                if (_running.TryGetValue(id, out var r))
+                {
+                    _coroutineManager.StopCoroutineByKey(r.key);
+                    _running.Remove(id);
+                    EventManager.OnActionSend(EventManager.TimerStopped, id, null); // убрать индикатор
+                }
+                _runs.EndRun(id);
+                AlarmNotify.Cancel(id);
+                AlarmNotify.HideRunning(id);
+            }
+        }
+
+        /// <summary>
+        /// Восстановить идущие таймеры после перезапуска приложения (отсчёт хранится только в памяти,
+        /// но момент завершения сохранён в TimerRunsStorage). Ждём кадр, чтобы UI и подписчики шины
+        /// поднялись. Ещё идущие — снова запускаем (индикатор + перевзведённый будильник); истёкшие,
+        /// пока приложение было закрыто, — показываем попапом «сработал» БЕЗ in-app звука.
+        /// </summary>
+        private IEnumerator RestoreRunningTimers()
+        {
+            yield return null; // дать AppController/индикаторам/попапу инициализироваться
+
+            AlarmNotify.StopRinging(); // заглушить возможный залипший звон до показа попапов
+            ApplyPendingStops();       // доесть таймеры, остановленные кнопкой «Стоп» в уведомлении
+
+            foreach (var run in new List<TimerRunsStorage.Run>(_runs.Runs)) // копия — список изменится
+            {
+                // Найти определение таймера; если его удалили — запись осиротевшая, чистим.
+                TimerData timer = null;
+                foreach (var t in _storage.Timers)
+                {
+                    if (t.id == run.timerId) { timer = t; break; }
+                }
+
+                DateTime endUtc;
+                bool parsed = DateTime.TryParse(run.endUtcIso, System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.RoundtripKind, out endUtc);
+
+                if (timer == null || !parsed || _running.ContainsKey(run.timerId))
+                {
+                    _runs.EndRun(run.timerId);
+                    AlarmNotify.Cancel(run.timerId);
+                    continue;
+                }
+
+                var r = new Running { timer = timer, endUtc = endUtc.ToUniversalTime() };
+                int remaining = RemainingSeconds(r);
+
+                if (remaining > 0)
+                {
+                    // Ещё идёт: восстановить отсчёт + перевзвести будильник (после ребута он стёрт).
+                    r.key = _coroutineManager.CoroutineParallel(RunTimer(r));
+                    _running[timer.id] = r;
+                    AlarmNotify.Schedule(timer.id, remaining + AlarmEndBufferSeconds,
+                        "Таймер", $"«{timer.name}» — время вышло");
+                    AlarmNotify.ShowRunning(timer.id, timer.name, r.endUtc.ToLocalTime().ToString("HH:mm"));
+                    EventManager.OnActionSend(EventManager.TimerStarted, timer, remaining);
+                }
+                else
+                {
+                    // Истёк, пока приложение было закрыто: попап без in-app звука, снять будильник/запись.
+                    EventManager.OnActionSend(EventManager.TimerCompleted, timer, false);
+                    AlarmNotify.Cancel(timer.id);
+                    AlarmNotify.HideRunning(timer.id);
+                    _runs.EndRun(timer.id);
+                }
+            }
         }
     }
 }

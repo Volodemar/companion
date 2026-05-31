@@ -50,10 +50,14 @@ public class AlarmService extends Service {
         createChannel();
         Notification notification = buildNotification(title, text);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(FGS_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
-        } else {
-            startForeground(FGS_NOTIFICATION_ID, notification);
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(FGS_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+            } else {
+                startForeground(FGS_NOTIFICATION_ID, notification);
+            }
+        } catch (Throwable t) {
+            // не валим сервис, если система не дала перейти в foreground
         }
 
         acquireWakeLock();

@@ -26,6 +26,7 @@ namespace Companion.Core
 
             // Хранилище и сервис таймеров
             Container.Bind<TimersStorage>().AsSingle();
+            Container.Bind<TimerRunsStorage>().AsSingle(); // идущие таймеры (переживают перезапуск)
             Container.Bind<TimerService>().AsSingle().NonLazy();
 
             // Хранилища раздела «Лекарства»: список строк и журнал истории приёма

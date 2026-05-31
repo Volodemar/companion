@@ -21,14 +21,32 @@ public class AlarmReceiver extends BroadcastReceiver {
             return;
         }
 
+        int id = intent != null ? intent.getIntExtra(AlarmApi.EXTRA_ID, 0) : 0;
+
+        // «Стоп» из постоянного «идущего» уведомления: снять будильник, убрать уведомление,
+        // пометить таймер остановленным (Unity доест пометку при возврате/запуске).
+        if (AlarmApi.ACTION_STOP_TIMER.equals(action)) {
+            AlarmApi.cancel(app, id);
+            AlarmApi.hideRunning(app, id);
+            AlarmApi.addPendingStop(app, id);
+            return;
+        }
+
+        // Срабатывание: «идущее» уведомление больше не нужно — его заменит звенящее.
+        AlarmApi.hideRunning(app, id);
+
         Intent svc = new Intent(app, AlarmService.class);
-        svc.putExtra(AlarmApi.EXTRA_ID, intent != null ? intent.getIntExtra(AlarmApi.EXTRA_ID, 0) : 0);
+        svc.putExtra(AlarmApi.EXTRA_ID, id);
         svc.putExtra(AlarmApi.EXTRA_TITLE, intent != null ? intent.getStringExtra(AlarmApi.EXTRA_TITLE) : null);
         svc.putExtra(AlarmApi.EXTRA_TEXT, intent != null ? intent.getStringExtra(AlarmApi.EXTRA_TEXT) : null);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-            app.startForegroundService(svc);
-        else
-            app.startService(svc);
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                app.startForegroundService(svc);
+            else
+                app.startService(svc);
+        } catch (Throwable t) {
+            // не валим приёмник, если система не дала стартовать сервис
+        }
     }
 }

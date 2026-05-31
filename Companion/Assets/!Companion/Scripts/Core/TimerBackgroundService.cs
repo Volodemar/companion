@@ -21,27 +21,23 @@ namespace Companion.Core
 
         private void OnApplicationPause(bool paused)
         {
+            // Уходим в фон — ничего планировать не нужно: будильник вооружён ещё при старте таймера
+            // (TimerService.StartTimer), поэтому он сработает, даже если процесс свернут/заморозят.
             if (paused)
-            {
-                // Уходим в фон: планируем будильник на остаток каждого таймера.
-                foreach (var (timer, remaining) in _timers.GetRunning())
-                {
-                    if (remaining > 0)
-                        AlarmNotify.Schedule(timer.id, remaining, "Таймер", $"«{timer.name}» — время вышло");
-                }
-            }
-            else
-            {
-                // Вернулись: снимаем запланированное и глушим возможный звон.
-                foreach (var (timer, _) in _timers.GetRunning())
-                    AlarmNotify.Cancel(timer.id);
+                return;
 
-                AlarmNotify.StopRinging();
+            // Вернулись: глушим возможный звон будильника. Будильники ещё идущих таймеров НЕ снимаем —
+            // они должны оставаться вооружёнными на случай повторного сворачивания.
+            AlarmNotify.StopRinging();
 
-                // Истёкшие в фоне: показать попап (какой таймер сработал), но БЕЗ in-app звука
-                // (нативный будильник уже отзвенел).
-                _timers.CompleteElapsed();
-            }
+            // Доесть таймеры, остановленные кнопкой «Стоп» из уведомления, пока были в фоне
+            // (native снял будильник/уведомление, здесь убираем индикатор и запись). ДО CompleteElapsed,
+            // чтобы остановленный таймер не «завершился» попапом.
+            _timers.ApplyPendingStops();
+
+            // Истёкшие в фоне: показать попап (какой таймер сработал), но БЕЗ in-app звука
+            // (нативный будильник уже отзвенел). CompleteElapsed → Complete снимет их будильники.
+            _timers.CompleteElapsed();
         }
     }
 }
