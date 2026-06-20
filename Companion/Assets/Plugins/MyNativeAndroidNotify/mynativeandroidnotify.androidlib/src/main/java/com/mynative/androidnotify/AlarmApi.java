@@ -8,7 +8,10 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Build;
+import android.os.PowerManager;
+import android.provider.Settings;
 
 /**
  * Точка входа из C# (через JNI). Планирует точный «будильник» через AlarmManager.
@@ -31,6 +34,9 @@ public class AlarmApi {
     // Хранилище id таймеров, остановленных кнопкой «Стоп» из уведомления (Unity доедает их при возврате).
     private static final String PREFS = "mnan_prefs";
     private static final String KEY_PENDING_STOP = "pending_stop"; // CSV id'шников
+    // «Уже спрашивали» для разовых системных запросов надёжности фона (чтобы не открывать настройки каждый старт).
+    private static final String KEY_ASKED_BATTERY = "asked_battery";
+    private static final String KEY_ASKED_FSI = "asked_fsi";
 
     public static void schedule(Context ctx, int id, int secondsFromNow, String title, String text) {
         Context app = ctx.getApplicationContext();
@@ -146,6 +152,60 @@ public class AlarmApi {
         if (csv != null && !csv.isEmpty())
             sp.edit().remove(KEY_PENDING_STOP).commit();
         return csv == null ? "" : csv;
+    }
+
+    // ── Надёжность фона: батарейная оптимизация + full-screen-intent (Android 14+) ─────────
+
+    /**
+     * Разово (один раз на установку для каждого пункта) запросить у пользователя то, без чего
+     * агрессивная прошивка глушит фоновый будильник: исключение из батарейной оптимизации
+     * и разрешение full-screen-intent (Android 14+, у сайдлоад-приложений по умолчанию снято).
+     * Открывает системный диалог/экран только если разрешение ещё НЕ выдано и его ещё не просили.
+     */
+    public static void requestBackgroundReliability(Context ctx) {
+        Context app = ctx.getApplicationContext();
+
+        if (!wasAsked(app, KEY_ASKED_BATTERY) && !isIgnoringBatteryOptimizations(app)) {
+            markAsked(app, KEY_ASKED_BATTERY);
+            try {
+                Intent i = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                        Uri.parse("package:" + app.getPackageName()));
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                ctx.startActivity(i);
+            } catch (Throwable ignored) {
+            }
+        }
+
+        if (Build.VERSION.SDK_INT >= 34 && !wasAsked(app, KEY_ASKED_FSI) && !canUseFullScreenIntent(app)) {
+            markAsked(app, KEY_ASKED_FSI);
+            try {
+                Intent i = new Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,
+                        Uri.parse("package:" + app.getPackageName()));
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                ctx.startActivity(i);
+            } catch (Throwable ignored) {
+            }
+        }
+    }
+
+    private static boolean isIgnoringBatteryOptimizations(Context ctx) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return true;
+        PowerManager pm = (PowerManager) ctx.getSystemService(Context.POWER_SERVICE);
+        return pm == null || pm.isIgnoringBatteryOptimizations(ctx.getPackageName());
+    }
+
+    private static boolean canUseFullScreenIntent(Context ctx) {
+        if (Build.VERSION.SDK_INT < 34) return true; // до Android 14 ограничения нет
+        NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+        return nm == null || nm.canUseFullScreenIntent();
+    }
+
+    private static boolean wasAsked(Context app, String key) {
+        return app.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(key, false);
+    }
+
+    private static void markAsked(Context app, String key) {
+        app.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(key, true).commit();
     }
 
     private static PendingIntent firePendingIntent(Context app, int id, String title, String text) {

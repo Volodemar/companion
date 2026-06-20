@@ -27,6 +27,27 @@ namespace MyNativeAndroidNotify
 #endif
         }
 
+        /// <summary>
+        /// Разово запросить разрешения, без которых агрессивная прошивка глушит фоновый будильник:
+        /// исключение из батарейной оптимизации и full-screen-intent (Android 14+). Звать при старте.
+        /// Системный диалог/экран откроется только если разрешение ещё не выдано и его ещё не просили.
+        /// </summary>
+        public static void RequestBackgroundReliability()
+        {
+#if UNITY_ANDROID && !UNITY_EDITOR
+            try
+            {
+                using (var api = new AndroidJavaClass(JavaClass))
+                using (var ctx = CurrentActivity())
+                    api.CallStatic("requestBackgroundReliability", ctx);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"Error: Ошибка запроса фоновых разрешений: {e.Message}");
+            }
+#endif
+        }
+
         /// <summary>Запланировать будильник через secondsFromNow секунд.</summary>
         public static void Schedule(int id, int secondsFromNow, string title, string text)
         {

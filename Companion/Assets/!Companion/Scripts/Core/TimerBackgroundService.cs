@@ -17,6 +17,9 @@ namespace Companion.Core
         private void Awake()
         {
             AlarmNotify.RequestNotificationPermission();
+            // Разово попросить исключение из батарейной оптимизации и full-screen-intent (Android 14+):
+            // без них агрессивная прошивка (MIUI/HyperOS) замораживает процесс и придерживает будильник.
+            AlarmNotify.RequestBackgroundReliability();
         }
 
         private void OnApplicationPause(bool paused)

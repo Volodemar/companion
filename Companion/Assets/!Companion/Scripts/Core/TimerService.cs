@@ -61,8 +61,9 @@ namespace Companion.Core
             // Системный будильник планируем СРАЗУ при старте (а не при сворачивании) — так он
             // надёжно вооружён к моменту, когда приложение свернут/заморозят. Зовётся ПОСЛЕ события,
             // чтобы любой сбой плагина не помешал запуску таймера и обновлению UI.
+            // title = имя таймера: его покажет и full-screen-экран будильника, и уведомление.
             AlarmNotify.Schedule(timer.id, durationSeconds + AlarmEndBufferSeconds,
-                "Таймер", $"«{timer.name}» — время вышло");
+                timer.name, "Время вышло");
 
             // Постоянное «идущее» уведомление: заранее посчитанное время окончания (не тикает) + «Стоп».
             AlarmNotify.ShowRunning(timer.id, timer.name, DateTime.Now.AddSeconds(durationSeconds).ToString("HH:mm"));
@@ -212,7 +213,7 @@ namespace Companion.Core
                     r.key = _coroutineManager.CoroutineParallel(RunTimer(r));
                     _running[timer.id] = r;
                     AlarmNotify.Schedule(timer.id, remaining + AlarmEndBufferSeconds,
-                        "Таймер", $"«{timer.name}» — время вышло");
+                        timer.name, "Время вышло");
                     AlarmNotify.ShowRunning(timer.id, timer.name, r.endUtc.ToLocalTime().ToString("HH:mm"));
                     EventManager.OnActionSend(EventManager.TimerStarted, timer, remaining);
                 }
